@@ -1,0 +1,13 @@
+# /daily — show today's event log
+
+## Usage
+/daily
+
+## What this does
+Reads `Brain/log/YYYY-MM-DD.md` (today's date) and displays the event log.
+
+## Instructions
+1. Determine today's date
+2. Read `vault/Brain/log/<YYYY-MM-DD>.md`
+3. Display the contents
+4. If the file doesn't exist, report "No events logged today yet."

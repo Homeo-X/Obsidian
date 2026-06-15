@@ -1,0 +1,20 @@
+# /capture — drop a raw signal into Brain/inbox/
+
+## Usage
+/capture <text>
+
+## What this does
+Runs `brain capture "<text>"` which:
+1. Creates `Brain/inbox/sig-<date>-<slug>.md` with YAML frontmatter (status: raw)
+2. Appends to today's `Brain/log/YYYY-MM-DD.md`
+3. Does NOT reason, route, or embed — cheap, fast, idempotent
+
+## When to use
+- You or the user has a thought, reference, or signal to preserve
+- During a conversation when something noteworthy comes up
+- Before any analysis — capture first, curate later
+
+## Instructions
+Execute: `brain capture "<user text>"`
+Report the created inbox path.
+Do not edit or analyze the signal at this stage.

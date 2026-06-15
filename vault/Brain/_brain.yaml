@@ -1,0 +1,15 @@
+schema_version: 1
+chunk_size: 1600
+chunk_overlap: 200
+model: BAAI/bge-base-en-v1.5
+embed_dim: 768
+thresholds:
+  similarity_error: 0.9
+  similarity_review: 0.8
+  memory_confirm: 3
+  memory_quarantine: 5
+notes:
+  read_paths: []
+retention:
+  inbox_days: 30
+  log_days: 365

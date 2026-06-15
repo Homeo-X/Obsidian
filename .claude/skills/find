@@ -1,0 +1,26 @@
+# /find — hybrid search over the vault (DISCOVERY only)
+
+## Usage
+/find <query> [-k N]
+
+## What this does
+Runs `brain find "<query>" -k N` which performs hybrid FTS + semantic search
+and returns note pointers ranked by reciprocal-rank fusion score.
+
+## IMPORTANT: retrieval policy
+Results are POINTERS ONLY. The index may be slightly stale.
+ALWAYS read the live Markdown file before quoting, summarizing, or acting on a result.
+
+Correct workflow:
+1. `/find "what do I know about X"` → get pointers
+2. Read the pointed-to file(s) with Read tool → get current content
+3. Act on the current content, not the snippet
+
+## When to use
+- Discovering what notes exist on a topic ("what do I know about...")
+- Finding related notes to wikilink during /save
+- Surfacing relevant context before writing a new note
+
+## When NOT to use
+- When you already know the exact file path → use Read directly
+- For operating on a known file → use Read, not search
