@@ -38,15 +38,20 @@ def search(query: str, k: int = 5) -> list[dict]:
 def save(content: str, note_type: str = "note", title: str | None = None, links: list[str] | None = None) -> dict:
     """
     Capture and save an atomic note under Brain/notes/. Honors the write contract (C1).
+    Immediately indexes the note so it's searchable (C4 — re-embed on change).
     Returns the saved file path.
     """
     from brain.curation import capture_signal, save_note
-    import tempfile, os
+    from brain.index import open_index, reindex_file
     from pathlib import Path
 
     cfg = _get_cfg()
     inbox_path = capture_signal(cfg, content, source="mcp")
     note_path = save_note(cfg, str(inbox_path), note_type=note_type, title=title, links=links or [])
+
+    with open_index(cfg) as idx:
+        reindex_file(idx, cfg, note_path)
+
     return {"saved_path": str(note_path), "note_type": note_type}
 
 

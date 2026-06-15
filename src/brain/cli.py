@@ -21,7 +21,10 @@ def main(ctx: click.Context, vault: str | None) -> None:
 @main.command()
 @click.pass_context
 def doctor(ctx: click.Context) -> None:
-    """Validate config, vault health, and index integrity."""
+    """Validate config, vault health, index integrity (chunk-map vs files), and metrics."""
+    import time
+    from datetime import datetime
+
     vault_override = ctx.obj.get("vault")
     try:
         cfg = load_config(vault_path=vault_override)
@@ -30,28 +33,70 @@ def doctor(ctx: click.Context) -> None:
         sys.exit(1)
 
     click.echo("=== brain doctor ===")
-    click.echo(f"vault_path  : {cfg.vault_path}")
-    click.echo(f"model       : {cfg.model}")
-    click.echo(f"embed_dim   : {cfg.embed_dim}")
-    click.echo(f"chunk_size  : {cfg.chunk_size}")
+    click.echo(f"vault_path   : {cfg.vault_path}")
+    click.echo(f"model        : {cfg.model}")
+    click.echo(f"embed_dim    : {cfg.embed_dim}")
+    click.echo(f"chunk_size   : {cfg.chunk_size}")
     click.echo(f"chunk_overlap: {cfg.chunk_overlap}")
-    click.echo(f"methodology : {cfg.methodology}")
+    click.echo(f"methodology  : {cfg.methodology}")
 
     issues: list[str] = []
 
+    # Vault structure
     brain_dir = cfg.brain_path
     if not brain_dir.exists():
-        issues.append(f"Brain/ missing — run `brain init` to scaffold: {brain_dir}")
+        issues.append(f"Brain/ missing — run `brain init`: {brain_dir}")
 
+    for subdir in ["inbox", "notes", "index", "preferences", "log"]:
+        if not (brain_dir / subdir).exists():
+            issues.append(f"Brain/{subdir}/ missing")
+
+    # Index DB presence + metrics
     index_db = cfg.index_path / "brain.sqlite"
     if not index_db.exists():
         issues.append(f"Index DB missing — run `brain reindex --all`: {index_db}")
+    else:
+        db_size_kb = index_db.stat().st_size // 1024
+        db_mtime = datetime.fromtimestamp(index_db.stat().st_mtime).strftime("%Y-%m-%d %H:%M:%S")
+        click.echo(f"index_size   : {db_size_kb} KB")
+        click.echo(f"last_reindex : {db_mtime}")
+
+        # Chunk-map integrity: chunks in DB that point to missing files
+        try:
+            from brain.index import open_index
+            with open_index(cfg) as idx:
+                total_chunks = idx.total_chunk_count()
+                click.echo(f"total_chunks : {total_chunks}")
+
+                cur = idx._conn.cursor()
+                cur.execute("SELECT DISTINCT note_path FROM chunks")
+                indexed_paths = {row[0] for row in cur.fetchall()}
+
+            orphans = [p for p in indexed_paths if not Path(p).exists()]
+            if orphans:
+                issues.append(
+                    f"{len(orphans)} orphan chunk(s) in index point to missing files "
+                    f"— run `brain reindex --all` to repair. First: {orphans[0]}"
+                )
+            else:
+                click.echo(f"orphan_chunks: 0 (clean)")
+
+            # Search latency (quick 1-shot)
+            from brain.embed import embed_query
+            t0 = time.perf_counter()
+            embed_query("test query", cfg)
+            latency_ms = (time.perf_counter() - t0) * 1000
+            click.echo(f"embed_latency: {latency_ms:.1f} ms")
+
+        except Exception as e:
+            issues.append(f"Index integrity check failed: {e}")
 
     if issues:
         for issue in issues:
             click.echo(f"[DEGRADED] {issue}")
+        sys.exit(1)
     else:
-        click.echo("Status      : OK")
+        click.echo("Status       : OK")
 
 
 @main.command()
